@@ -11,11 +11,17 @@ export function collectGrants(ast: Node): Set<string> {
 	let scope = attachScopes(ast, "scope");
 	const grantSetPerFile = new Set<string>();
 	walk(ast, {
-		enter(node: Node & { scope: AttachedScope }, parent) {
+		enter(nde: Node, parent) {
+			const node = nde as Node & { scope: AttachedScope };
 			if (node.scope) scope = node.scope;
 
-			if (node.type === "MemberExpression" && isReference(node, parent)) {
+			if (
+				node.type === "MemberExpression" &&
+				parent !== null &&
+				isReference(node, parent)
+			) {
 				const fullName = getMemberExpressionFullNameRecursive(node);
+				if (fullName === null) return;
 				const match = GRANTS_REGEXP.exec(fullName);
 				if (match) {
 					grantSetPerFile.add(match[0]);
@@ -26,6 +32,7 @@ export function collectGrants(ast: Node): Set<string> {
 
 			if (
 				node.type === "Identifier" &&
+				parent !== null &&
 				isReference(node, parent) &&
 				!scope.contains(node.name)
 			) {
@@ -35,8 +42,11 @@ export function collectGrants(ast: Node): Set<string> {
 				}
 			}
 		},
-		leave(node: Node & { scope: AttachedScope }) {
-			if (node.scope) scope = scope.parent;
+		leave(nde: Node) {
+			const node = nde as Node & { scope: AttachedScope };
+
+			// biome-ignore lint/style/noNonNullAssertion: ok
+			if (node.scope) scope = scope.parent!;
 		},
 	});
 	return grantSetPerFile;
@@ -95,16 +105,16 @@ export function getMetadata(
 				grantSet.add(value);
 				return undefined;
 			}
-			return [key, value];
+			return [key, value] as const;
 		})
-		.filter(Boolean);
+		.filter(x => x !== undefined);
 	for (const item of additionalGrantList) {
 		grantSet.add(item);
 	}
 	const grantList = Array.from(grantSet);
 	grantList.sort();
 	for (const item of grantList) {
-		entries.push(["@grant", item]);
+		entries.push(["@grant", item] as const);
 	}
 	const maxKeyWidth = Math.max(...entries.map(([key]) => key.length));
 	return [

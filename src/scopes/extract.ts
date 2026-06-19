@@ -1,21 +1,32 @@
 import type {
 	ArrayPattern,
 	AssignmentPattern,
-	BaseNode,
-	BasePattern,
-	Identifier,
+	BindingRestElement,
+	MemberExpression,
 	ObjectPattern,
-	RestElement,
-} from "estree";
+} from "oxc-parser";
+import type { Identifier } from "oxc-walker";
 
-interface Extractors {
-	[key: string]: (names: string[], pattern: BasePattern) => void;
+interface Patterns {
+	ArrayPattern: ArrayPattern;
+	AssignmentPattern: AssignmentPattern;
+	Identifier: Identifier;
+	MemberExpression: MemberExpression;
+	ObjectPattern: ObjectPattern;
+	BindingRestElement: BindingRestElement;
 }
+type KVRec<A> = {
+	[KEY in keyof A]: (names: string[], param: typeof A[KEY]) => void;
+};
+
+type Extractors = KVRec<Patterns>;
 
 const extractors: Extractors = {
 	ArrayPattern(names: string[], param: ArrayPattern) {
 		for (const element of param.elements) {
-			if (element) extractors[element.type](names, element);
+			if (element === null) continue;
+			//@ts-expect-error: ok
+			extractors[element.type]?.(names, element);
 		}
 	},
 
@@ -32,21 +43,22 @@ const extractors: Extractors = {
 	ObjectPattern(names: string[], param: ObjectPattern) {
 		for (const prop of param.properties) {
 			if (prop.type === "RestElement") {
-				extractors.RestElement(names, prop);
+				extractors.BindingRestElement(names, prop);
 			} else {
 				extractors[prop.value.type](names, prop.value);
 			}
 		}
 	},
 
-	RestElement(names: string[], param: RestElement) {
+	BindingRestElement(names: string[], param: BindingRestElement) {
 		extractors[param.argument.type](names, param.argument);
 	},
 };
 
-export default function extractAssignedNames(param: BaseNode): string[] {
+export default function extractAssignedNames(param: Node): string[] {
 	const names: string[] = [];
 
-	extractors[param.type](names, param);
+	//@ts-expect-error: ok
+	extractors[param.type]?.(names, param);
 	return names;
 }

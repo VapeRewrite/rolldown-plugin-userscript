@@ -1,14 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Plugin } from "rolldown";
 import { withFilter } from "rolldown/filter";
-import {
-	type Context,
-	defineParallelPluginImplementation,
-	type ParallelPluginImplementation,
-} from "rolldown/parallelPlugin";
 import { collectGrants, getMetadata } from "./util.js";
-
-type MaybePromise<T> = T | Promise<T>;
 
 const suffix = "?userscript-metadata";
 
@@ -34,7 +27,11 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 			name: "userscript-metadata",
 			async resolveId(source, importer, options) {
 				if (source.endsWith(suffix)) {
-					const resolved = await this.resolve(source, importer, options);
+					const resolved = await this.resolve(
+						source,
+						importer,
+						options,
+					);
 					if (resolved === null) return source;
 					let { id } = resolved;
 					if (id.endsWith(suffix)) id = id.slice(0, -suffix.length);
@@ -49,17 +46,26 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 			},
 			transform: {
 				filter: {
-					id: /\.js$/,
+					id: /\.[cm]?[jt]sx?$/,
 				},
-				handler(code, id) {
-					const ast = this.parse(code);
+				order: "post",
+				handler(code, id, meta) {
+					const ast =
+						meta.ast ??
+						this.parse(code, {
+							lang:
+								id.endsWith(".ts") || id.endsWith(".tsx")
+									? "ts"
+									: "js",
+						});
 					const grantSetPerFile = collectGrants(ast);
 					grantMap.set(id, grantSetPerFile);
 				},
 			},
-			renderChunk: {
+
+			banner: {
 				order: "post",
-				async handler(code, chunk) {
+				async handler(chunk) {
 					const metadataFile =
 						chunk.isEntry &&
 						[chunk.facadeModuleId, ...Object.keys(chunk.modules)]
@@ -74,7 +80,7 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 						if (grantSetPerFile) {
 							for (const item of grantSetPerFile) {
 								if (
-									userOptions?.ignoreAutomaticGrants?.includes(
+									userOptions.ignoreAutomaticGrants?.includes(
 										item,
 									)
 								) {
@@ -86,9 +92,9 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 						}
 					}
 					metadata = getMetadata(metadata, grantSet);
-					if (userOptions?.transform)
+					if (userOptions.transform)
 						metadata = userOptions.transform(metadata);
-					return `${metadata}\n${code}`;
+					return metadata;
 				},
 			},
 		},
@@ -99,12 +105,4 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 	);
 }
 
-const parallel: (
-	opts: TransformOrUserOpt,
-	ctx: Context,
-) => MaybePromise<ParallelPluginImplementation> =
-	defineParallelPluginImplementation((a: TransformOrUserOpt, _ctx) => {
-		return userscriptPlugin(a);
-	});
-
-export default parallel;
+export default userscriptPlugin;

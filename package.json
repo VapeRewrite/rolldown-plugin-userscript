@@ -1,6 +1,6 @@
 {
 	"name": "rolldown-plugin-userscript",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"description": "Rolldown plugin for UserScripts",
 	"author": "Seized and Desisted",
 	"license": "MIT",
@@ -10,12 +10,13 @@
 		"dev": "tsdown --watch",
 		"clean": "rm -rf dist",
 		"build": "tsdown",
-		"test": "vitest --run",
+		"test": "bun test",
 		"prepublishOnly": "bun run build"
 	},
 	"type": "module",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.mts",
+	"readme": "ReadME.md",
 	"exports": {
 		".": {
 			"import": "./dist/index.mjs",
@@ -23,7 +24,9 @@
 		}
 	},
 	"files": [
-		"dist"
+		"dist",
+		"ReadME.md",
+		"LICENSE"
 	],
 	"keywords": [
 		"rolldown",
@@ -34,23 +37,21 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
-		"@oxc-project/types": "^0.125.0",
-		"oxc-parser": "^0.125.0",
-		"oxc-walker": "^0.7.0",
-		"rolldown-string": "^0.3.0",
-		"vitest": "^4.1.4"
+		"@oxc-project/types": "^0.134.0",
+		"oxc-parser": "^0.134.0",
+		"oxc-walker": "^1.0.0",
+		"rolldown-string": "^0.3.0"
 	},
 	"devDependencies": {
-		"@types/node": "^25.3.3",
-		"@biomejs/biome": "^2.4.4",
-		"globals": "^17.3.0",
-		"husky": "^9.1.7",
-		"rolldown": "^1.0.0-rc.15",
-		"typescript": "^6.0.2",
-		"tsdown": "0.21.8"
+		"@biomejs/biome": "^2.4.16",
+		"@types/node": "^25.9.1",
+		"globals": "^17.6.0",
+		"rolldown": "^1.0.3",
+		"tsdown": "0.22.1",
+		"typescript": "^6.0.3"
 	},
 	"peerDependencies": {
-		"rolldown": "^1.0.0-rc.15"
+		"rolldown": "^1.0.0-rc.18"
 	},
 	"repository": {
 		"type": "git",

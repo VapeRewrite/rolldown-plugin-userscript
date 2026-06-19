@@ -3,6 +3,9 @@
 		"target": "esnext",
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
+		"types": [
+			"node"
+		],
 		"declaration": true,
 		"emitDeclarationOnly": true,
 		"outDir": "dist",
@@ -10,5 +13,7 @@
 		"skipLibCheck": true,
 		"isolatedDeclarations": true
 	},
-	"include": ["src/**/*"]
+	"include": [
+		"src/**/*"
+	]
 }
