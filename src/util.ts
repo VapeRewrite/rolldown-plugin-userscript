@@ -107,7 +107,7 @@ export function getMetadata(
 			}
 			return [key, value] as const;
 		})
-		.filter(x => x !== undefined);
+		.filter((x) => x !== undefined);
 	for (const item of additionalGrantList) {
 		grantSet.add(item);
 	}

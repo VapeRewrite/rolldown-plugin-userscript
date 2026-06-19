@@ -16,7 +16,7 @@ interface Patterns {
 	BindingRestElement: BindingRestElement;
 }
 type KVRec<A> = {
-	[KEY in keyof A]: (names: string[], param: typeof A[KEY]) => void;
+	[KEY in keyof A]: (names: string[], param: (typeof A)[KEY]) => void;
 };
 
 type Extractors = KVRec<Patterns>;
