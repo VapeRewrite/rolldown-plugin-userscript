@@ -1,8 +1,7 @@
 # rolldown-plugin-userscript
 
 > [!WARNING]
-> I broke the automatically setting `@grant`s part and this breaks in production due to Rolldown stripping the comments.
-> Probably just use the Rollup one instead of using this, rollup-plugin-userscript should work with Rolldown anyway.
+> This breaks in production due to Rolldown stripping the comments.
 > See [this wiki entry](https://github.com/MinibloxCheaters2/rolldown-plugin-userscript/wiki/Using-Minification-alongside-this) to fix production / minified builds
 
 ![NPM](https://img.shields.io/npm/v/rolldown-plugin-userscript.svg)
@@ -31,3 +30,7 @@ Import the metadata file with a suffix `?userscript-metadata` in your script:
 ```js
 import './meta.js?userscript-metadata';
 ```
+
+> [!TIP]
+> You can use multiple metadata files now,
+> this helps for projects with multiple userscripts that they don't want to combine!

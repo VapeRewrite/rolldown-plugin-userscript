@@ -10,6 +10,7 @@ const GRANTS_REGEXP = /^(unsafeWindow$|GM[._]\w+)/;
 const MULTI_VALUED_KEYS = new Set([
 	'@match',
 	'@include',
+	'@grant',
 	'@exclude',
 	'@exclude-match',
 	'@require',
