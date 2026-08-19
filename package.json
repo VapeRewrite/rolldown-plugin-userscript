@@ -1,12 +1,14 @@
 {
 	"name": "rolldown-plugin-userscript",
-	"version": "1.1.2",
+	"version": "1.1.3",
 	"description": "Rolldown plugin for UserScripts",
 	"author": "Seized and Desisted",
 	"license": "MIT",
 	"scripts": {
 		"ci": "bun run lint && bun run test",
-		"lint": "biome check",
+		"lint": "oxlint src/ test/",
+		"lint:fix": "oxlint src/ test/ --fix",
+		"fmt": "oxfmt src/ test/",
 		"dev": "tsdown --watch",
 		"clean": "rm -rf dist",
 		"build": "tsdown",
@@ -37,21 +39,21 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
-		"@oxc-project/types": "^0.134.0",
-		"oxc-parser": "^0.134.0",
-		"oxc-walker": "^1.0.0",
-		"rolldown-string": "^0.3.0"
+		"@oxc-project/types": "^0.145.0",
+		"oxc-parser": "^0.145.0",
+		"oxc-walker": "^1.1.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.16",
-		"@types/node": "^25.9.1",
-		"globals": "^17.6.0",
-		"rolldown": "^1.0.3",
-		"tsdown": "0.22.1",
-		"typescript": "^6.0.3"
+		"@types/node": "^26.2.0",
+		"globals": "^17.11.0",
+		"oxfmt": "^0.64.0",
+		"oxlint": "^1.79.0",
+		"rolldown": "^1.2.4",
+		"tsdown": "0.22.14",
+		"typescript": "^7.0.2"
 	},
 	"peerDependencies": {
-		"rolldown": "^1.0.0-rc.18"
+		"rolldown": "^1.2.4"
 	},
 	"repository": {
 		"type": "git",

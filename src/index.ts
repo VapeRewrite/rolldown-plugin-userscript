@@ -1,9 +1,9 @@
-import { readFile } from "node:fs/promises";
-import type { Plugin } from "rolldown";
-import { withFilter } from "rolldown/filter";
-import { collectGrants, getMetadata } from "./util.js";
+import { readFile } from 'node:fs/promises';
+import type { Plugin } from 'rolldown';
+import { withFilter } from 'rolldown/filter';
+import { collectGrants, getMetadata } from './util.js';
 
-const suffix = "?userscript-metadata";
+const suffix = '?userscript-metadata';
 
 type TransformFn = (metadata: string) => string;
 
@@ -16,47 +16,42 @@ type TransformOrUserOpt = TransformFn | UserscriptMetaOptions;
 
 function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 	const userOptions =
-		typeof transformOrUserOptions === "function"
+		typeof transformOrUserOptions === 'function'
 			? { transform: transformOrUserOptions }
 			: transformOrUserOptions;
 
-	const metadataMap = new Map();
+	const metadataFiles = new Set<string>();
+	const importersOfMetadata = new Set<string>();
 	const grantMap = new Map();
 	return withFilter(
 		{
-			name: "userscript-metadata",
+			name: 'userscript-metadata',
 			async resolveId(source, importer, options) {
 				if (source.endsWith(suffix)) {
-					const resolved = await this.resolve(
-						source,
-						importer,
-						options,
-					);
+					const resolved = await this.resolve(source, importer, options);
 					if (resolved === null) return source;
 					let { id } = resolved;
 					if (id.endsWith(suffix)) id = id.slice(0, -suffix.length);
-					metadataMap.set(importer, id);
+					metadataFiles.add(id);
+					if (importer) importersOfMetadata.add(importer);
 					return source;
 				}
 			},
 			load(id) {
 				if (id.endsWith(suffix)) {
-					return "";
+					return '';
 				}
 			},
 			transform: {
 				filter: {
 					id: /\.[cm]?[jt]sx?$/,
 				},
-				order: "post",
+				order: 'post',
 				handler(code, id, meta) {
 					const ast =
 						meta.ast ??
 						this.parse(code, {
-							lang:
-								id.endsWith(".ts") || id.endsWith(".tsx")
-									? "ts"
-									: "js",
+							lang: id.endsWith('.ts') || id.endsWith('.tsx') ? 'ts' : 'js',
 						});
 					const grantSetPerFile = collectGrants(ast);
 					grantMap.set(id, grantSetPerFile);
@@ -64,26 +59,29 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 			},
 
 			banner: {
-				order: "post",
+				order: 'post',
 				async handler(chunk) {
-					const metadataFile =
-						chunk.isEntry &&
-						[chunk.facadeModuleId, ...Object.keys(chunk.modules)]
-							.map((id) => metadataMap.get(id))
-							.find(Boolean);
+					if (!chunk.isEntry) return;
 
-					if (!metadataFile) return;
-					let metadata = await readFile(metadataFile, "utf8");
+					const chunkModuleIds = [
+						...(chunk.facadeModuleId ? [chunk.facadeModuleId] : []),
+						...Object.keys(chunk.modules),
+					];
+
+					const chunkHasMetadata = chunkModuleIds.some((id) => importersOfMetadata.has(id));
+
+					if (!chunkHasMetadata) return;
+
+					const metadataContents: string[] = await Promise.all(
+						[...metadataFiles].map((file) => readFile(file, 'utf8')),
+					);
+
 					const grantSet = new Set<string>();
 					for (const id of this.getModuleIds()) {
 						const grantSetPerFile = grantMap.get(id);
 						if (grantSetPerFile) {
 							for (const item of grantSetPerFile) {
-								if (
-									userOptions.ignoreAutomaticGrants?.includes(
-										item,
-									)
-								) {
+								if (userOptions?.ignoreAutomaticGrants?.includes(item)) {
 									continue;
 								}
 
@@ -91,9 +89,9 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 							}
 						}
 					}
-					metadata = getMetadata(metadata, grantSet);
-					if (userOptions.transform)
-						metadata = userOptions.transform(metadata);
+
+					let metadata = getMetadata(metadataContents, grantSet);
+					if (userOptions?.transform) metadata = userOptions.transform(metadata);
 					return metadata;
 				},
 			},

@@ -4,8 +4,8 @@ import type {
 	BindingRestElement,
 	MemberExpression,
 	ObjectPattern,
-} from "oxc-parser";
-import type { Identifier } from "oxc-walker";
+} from 'oxc-parser';
+import type { Identifier } from 'oxc-walker';
 
 interface Patterns {
 	ArrayPattern: ArrayPattern;
@@ -42,7 +42,7 @@ const extractors: Extractors = {
 
 	ObjectPattern(names: string[], param: ObjectPattern) {
 		for (const prop of param.properties) {
-			if (prop.type === "RestElement") {
+			if (prop.type === 'RestElement') {
 				extractors.BindingRestElement(names, prop);
 			} else {
 				extractors[prop.value.type](names, prop.value);

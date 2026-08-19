@@ -1,43 +1,43 @@
-import type { Node } from "@oxc-project/types";
+import type { Node } from '@oxc-project/types';
 
 export default function isReference(node: Node, parent: Node): boolean {
-	if (node.type === "MemberExpression") {
+	if (node.type === 'MemberExpression') {
 		return !node.computed && isReference(node.object, node);
 	}
 
-	if (node.type !== "Identifier") return false;
+	if (node.type !== 'Identifier') return false;
 
 	switch (parent?.type) {
 		// disregard `bar` in `foo.bar`
-		case "MemberExpression":
+		case 'MemberExpression':
 			return parent.computed || node === parent.object;
 
 		// disregard the `foo` in `class {foo(){}}` but keep it in `class {[foo](){}}`
-		case "MethodDefinition":
+		case 'MethodDefinition':
 			return parent.computed;
 
 		// disregard the `meta` in `import.meta`
-		case "MetaProperty":
+		case 'MetaProperty':
 			return parent.meta === node;
 
 		// disregard the `foo` in `class {foo=bar}` but keep it in `class {[foo]=bar}` and `class {bar=foo}`
-		case "PropertyDefinition":
+		case 'PropertyDefinition':
 			return parent.computed || node === parent.value;
 
 		// disregard the `bar` in `{ bar: foo }`, but keep it in `{ [bar]: foo }`
-		case "Property":
+		case 'Property':
 			return parent.computed || node === parent.value;
 
 		// disregard the `bar` in `export { foo as bar }` or
 		// the foo in `import { foo as bar }`
-		case "ExportSpecifier":
-		case "ImportSpecifier":
+		case 'ExportSpecifier':
+		case 'ImportSpecifier':
 			return node === parent.local;
 
 		// disregard the `foo` in `foo: while (...) { ... break foo; ... continue foo;}`
-		case "LabeledStatement":
-		case "BreakStatement":
-		case "ContinueStatement":
+		case 'LabeledStatement':
+		case 'BreakStatement':
+		case 'ContinueStatement':
 			return false;
 
 		default:

@@ -1,25 +1,21 @@
-import type { MemberExpression, Node } from "@oxc-project/types";
-import { walk } from "oxc-walker";
-import isReference from "./is-reference.js";
-import attachScopes, { type AttachedScope } from "./scopes/attachScopes.js";
+import type { MemberExpression, Node } from '@oxc-project/types';
+import { walk } from 'oxc-walker';
+import isReference from './is-reference.js';
+import attachScopes, { type AttachedScope } from './scopes/attachScopes.js';
 
-const META_START = "// ==UserScript==";
-const META_END = "// ==/UserScript==";
+const META_START = '// ==UserScript==';
+const META_END = '// ==/UserScript==';
 const GRANTS_REGEXP = /^(unsafeWindow$|GM[._]\w+)/;
 
 export function collectGrants(ast: Node): Set<string> {
-	let scope = attachScopes(ast, "scope");
+	let scope = attachScopes(ast, 'scope');
 	const grantSetPerFile = new Set<string>();
 	walk(ast, {
 		enter(nde: Node, parent) {
 			const node = nde as Node & { scope: AttachedScope };
 			if (node.scope) scope = node.scope;
 
-			if (
-				node.type === "MemberExpression" &&
-				parent !== null &&
-				isReference(node, parent)
-			) {
+			if (node.type === 'MemberExpression' && parent !== null && isReference(node, parent)) {
 				const fullName = getMemberExpressionFullNameRecursive(node);
 				if (fullName === null) return;
 				const match = GRANTS_REGEXP.exec(fullName);
@@ -31,7 +27,7 @@ export function collectGrants(ast: Node): Set<string> {
 			}
 
 			if (
-				node.type === "Identifier" &&
+				node.type === 'Identifier' &&
 				parent !== null &&
 				isReference(node, parent) &&
 				!scope.contains(node.name)
@@ -52,25 +48,21 @@ export function collectGrants(ast: Node): Set<string> {
 	return grantSetPerFile;
 }
 
-function getMemberExpressionFullNameRecursive(
-	astNode: MemberExpression,
-): string | null {
-	if (astNode.property.type !== "Identifier") {
+function getMemberExpressionFullNameRecursive(astNode: MemberExpression): string | null {
+	if (astNode.property.type !== 'Identifier') {
 		return null;
 	}
 
 	switch (astNode.object.type) {
-		case "MemberExpression": {
-			const nameSoFar = getMemberExpressionFullNameRecursive(
-				astNode.object,
-			);
+		case 'MemberExpression': {
+			const nameSoFar = getMemberExpressionFullNameRecursive(astNode.object);
 			if (nameSoFar == null) {
 				return null;
 			}
 
 			return `${nameSoFar}.${astNode.property.name}`;
 		}
-		case "Identifier": {
+		case 'Identifier': {
 			return `${astNode.object.name}.${astNode.property.name}`;
 		}
 		default: {
@@ -79,49 +71,102 @@ function getMemberExpressionFullNameRecursive(
 	}
 }
 
-export function getMetadata(
-	metaFileContent: string,
-	additionalGrantList: Set<string>,
-): string {
-	const lines = metaFileContent.split("\n").map((line) => line.trim());
+interface ParsedEntries {
+	entries: [string, string][];
+	grants: Set<string>;
+}
+
+function parseEntries(content: string): ParsedEntries {
+	const lines = content.split('\n').map((line) => line.trim());
 	const start = lines.indexOf(META_START);
 	const end = lines.indexOf(META_END);
 	if (start < 0 || end < 0) {
 		throw new Error(
-			"Invalid metadata block. For more details see https://violentmonkey.github.io/api/metadata-block/",
+			'Invalid metadata block. For more details see https://violentmonkey.github.io/api/metadata-block/',
 		);
 	}
-	const grantSet = new Set<string>();
-	const entries = lines
-		.slice(start + 1, end)
-		.map((line) => {
-			if (!line.startsWith("// ")) return undefined;
-			line = line.slice(3).trim();
-			const matches = line.match(/^(\S+)(\s.*)?$/);
-			if (!matches) return undefined;
-			const key = matches[1];
-			const value = (matches[2] || "").trim();
-			if (key === "@grant") {
-				grantSet.add(value);
-				return undefined;
-			}
-			return [key, value] as const;
-		})
-		.filter((x) => x !== undefined);
-	for (const item of additionalGrantList) {
-		grantSet.add(item);
+	const grants = new Set<string>();
+	const entries: [string, string][] = [];
+	for (const line of lines.slice(start + 1, end)) {
+		if (!line.startsWith('// ')) continue;
+		const trimmed = line.slice(3).trim();
+		const matches = trimmed.match(/^(\S+)(\s.*)?$/);
+		if (!matches) continue;
+		const key = matches[1];
+		const value = (matches[2] || '').trim();
+		if (key === '@grant') {
+			grants.add(value);
+		} else {
+			entries.push([key, value]);
+		}
 	}
-	const grantList = Array.from(grantSet);
-	grantList.sort();
-	for (const item of grantList) {
-		entries.push(["@grant", item] as const);
-	}
+	return { entries, grants };
+}
+
+function formatMetadata(entries: [string, string][]): string {
 	const maxKeyWidth = Math.max(...entries.map(([key]) => key.length));
 	return [
 		META_START,
-		...entries.map(
-			([key, value]) => `// ${key.padEnd(maxKeyWidth)} ${value}`,
-		),
+		...entries.map(([key, value]) => `// ${key.padEnd(maxKeyWidth)} ${value}`),
 		META_END,
-	].join("\n");
+	].join('\n');
+}
+
+export function mergeMetadata(metaFileContents: string[]): string {
+	const seen = new Set<string>();
+	const mergedEntries: [string, string][] = [];
+	const mergedGrants = new Set<string>();
+
+	for (const content of metaFileContents) {
+		const { entries, grants } = parseEntries(content);
+		for (const [key, value] of entries) {
+			if (seen.has(key)) continue;
+			seen.add(key);
+			mergedEntries.push([key, value]);
+		}
+		for (const grant of grants) {
+			mergedGrants.add(grant);
+		}
+	}
+
+	const sortedGrants = Array.from(mergedGrants).sort();
+	for (const grant of sortedGrants) {
+		mergedEntries.push(['@grant', grant]);
+	}
+
+	return formatMetadata(mergedEntries);
+}
+
+export function getMetadata(
+	metaFileContent: string | string[],
+	additionalGrantList: Set<string>,
+): string {
+	const contents = Array.isArray(metaFileContent) ? metaFileContent : [metaFileContent];
+
+	const seen = new Set<string>();
+	const mergedEntries: [string, string][] = [];
+	const mergedGrants = new Set<string>();
+
+	for (const content of contents) {
+		const { entries, grants } = parseEntries(content);
+		for (const [key, value] of entries) {
+			if (seen.has(key)) continue;
+			seen.add(key);
+			mergedEntries.push([key, value]);
+		}
+		for (const grant of grants) {
+			mergedGrants.add(grant);
+		}
+	}
+
+	for (const grant of additionalGrantList) {
+		mergedGrants.add(grant);
+	}
+
+	const sortedGrants = Array.from(mergedGrants).sort();
+	for (const grant of sortedGrants) {
+		mergedEntries.push(['@grant', grant]);
+	}
+
+	return formatMetadata(mergedEntries);
 }
