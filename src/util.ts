@@ -7,6 +7,16 @@ const META_START = '// ==UserScript==';
 const META_END = '// ==/UserScript==';
 const GRANTS_REGEXP = /^(unsafeWindow$|GM[._]\w+)/;
 
+const MULTI_VALUED_KEYS = new Set([
+	'@match',
+	'@include',
+	'@exclude',
+	'@exclude-match',
+	'@require',
+	'@resource',
+	'@antifeature',
+]);
+
 export function collectGrants(ast: Node): Set<string> {
 	let scope = attachScopes(ast, 'scope');
 	const grantSetPerFile = new Set<string>();
@@ -74,6 +84,7 @@ function getMemberExpressionFullNameRecursive(astNode: MemberExpression): string
 interface ParsedEntries {
 	entries: [string, string][];
 	grants: Set<string>;
+	multiValued: Map<string, Set<string>>;
 }
 
 function parseEntries(content: string): ParsedEntries {
@@ -86,6 +97,7 @@ function parseEntries(content: string): ParsedEntries {
 		);
 	}
 	const grants = new Set<string>();
+	const multiValued = new Map<string, Set<string>>();
 	const entries: [string, string][] = [];
 	for (const line of lines.slice(start + 1, end)) {
 		if (!line.startsWith('// ')) continue;
@@ -96,11 +108,14 @@ function parseEntries(content: string): ParsedEntries {
 		const value = (matches[2] || '').trim();
 		if (key === '@grant') {
 			grants.add(value);
+		} else if (MULTI_VALUED_KEYS.has(key)) {
+			if (!multiValued.has(key)) multiValued.set(key, new Set());
+			multiValued.get(key)!.add(value);
 		} else {
 			entries.push([key, value]);
 		}
 	}
-	return { entries, grants };
+	return { entries, grants, multiValued };
 }
 
 function formatMetadata(entries: [string, string][]): string {
@@ -116,9 +131,10 @@ export function mergeMetadata(metaFileContents: string[]): string {
 	const seen = new Set<string>();
 	const mergedEntries: [string, string][] = [];
 	const mergedGrants = new Set<string>();
+	const mergedMultiValued = new Map<string, Set<string>>();
 
 	for (const content of metaFileContents) {
-		const { entries, grants } = parseEntries(content);
+		const { entries, grants, multiValued } = parseEntries(content);
 		for (const [key, value] of entries) {
 			if (seen.has(key)) continue;
 			seen.add(key);
@@ -127,11 +143,22 @@ export function mergeMetadata(metaFileContents: string[]): string {
 		for (const grant of grants) {
 			mergedGrants.add(grant);
 		}
+		for (const [key, values] of multiValued) {
+			if (!mergedMultiValued.has(key)) mergedMultiValued.set(key, new Set());
+			const set = mergedMultiValued.get(key)!;
+			for (const v of values) set.add(v);
+		}
 	}
 
 	const sortedGrants = Array.from(mergedGrants).sort();
 	for (const grant of sortedGrants) {
 		mergedEntries.push(['@grant', grant]);
+	}
+
+	for (const [key, values] of mergedMultiValued) {
+		for (const value of values) {
+			mergedEntries.push([key, value]);
+		}
 	}
 
 	return formatMetadata(mergedEntries);
@@ -146,9 +173,10 @@ export function getMetadata(
 	const seen = new Set<string>();
 	const mergedEntries: [string, string][] = [];
 	const mergedGrants = new Set<string>();
+	const mergedMultiValued = new Map<string, Set<string>>();
 
 	for (const content of contents) {
-		const { entries, grants } = parseEntries(content);
+		const { entries, grants, multiValued } = parseEntries(content);
 		for (const [key, value] of entries) {
 			if (seen.has(key)) continue;
 			seen.add(key);
@@ -156,6 +184,11 @@ export function getMetadata(
 		}
 		for (const grant of grants) {
 			mergedGrants.add(grant);
+		}
+		for (const [key, values] of multiValued) {
+			if (!mergedMultiValued.has(key)) mergedMultiValued.set(key, new Set());
+			const set = mergedMultiValued.get(key)!;
+			for (const v of values) set.add(v);
 		}
 	}
 
@@ -166,6 +199,12 @@ export function getMetadata(
 	const sortedGrants = Array.from(mergedGrants).sort();
 	for (const grant of sortedGrants) {
 		mergedEntries.push(['@grant', grant]);
+	}
+
+	for (const [key, values] of mergedMultiValued) {
+		for (const value of values) {
+			mergedEntries.push([key, value]);
+		}
 	}
 
 	return formatMetadata(mergedEntries);

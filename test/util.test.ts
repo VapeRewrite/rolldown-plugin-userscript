@@ -176,4 +176,85 @@ describe('getMetadata', () => {
 			'// @grant GM_setValue',
 		]);
 	});
+
+	it('should merge multi-valued keys across files', () => {
+		const file1 = `// ==UserScript==
+// @name TestScript
+// @match https://example.com/*
+// ==/UserScript==`;
+		const file2 = `// ==UserScript==
+// @match https://other.com/*
+// ==/UserScript==`;
+		const result = getMetadata([file1, file2], new Set());
+		expect(result).toContain('// @match https://example.com/*');
+		expect(result).toContain('// @match https://other.com/*');
+	});
+
+	it('should deduplicate identical multi-valued key values across files', () => {
+		const file1 = `// ==UserScript==
+// @name TestScript
+// @match https://example.com/*
+// ==/UserScript==`;
+		const file2 = `// ==UserScript==
+// @match https://example.com/*
+// ==/UserScript==`;
+		const result = getMetadata([file1, file2], new Set());
+		const matchLines = result.split('\n').filter((l) => l.includes('@match'));
+		expect(matchLines).toHaveLength(1);
+	});
+
+	it('should merge multi-valued keys within a single file', () => {
+		const input = `// ==UserScript==
+// @name TestScript
+// @match https://example.com/*
+// @match https://other.com/*
+// ==/UserScript==`;
+		const result = getMetadata(input, new Set());
+		expect(result).toContain('// @match https://example.com/*');
+		expect(result).toContain('// @match https://other.com/*');
+	});
+
+	it('should deduplicate identical multi-valued keys within a single file', () => {
+		const input = `// ==UserScript==
+// @name TestScript
+// @match https://example.com/*
+// @match https://example.com/*
+// ==/UserScript==`;
+		const result = getMetadata(input, new Set());
+		const matchLines = result.split('\n').filter((l) => l.includes('@match'));
+		expect(matchLines).toHaveLength(1);
+	});
+
+	it('should still let first file win on single-valued duplicate keys while merging multi-valued keys', () => {
+		const file1 = `// ==UserScript==
+// @name First
+// @match https://first.com/*
+// @require https://cdn.example.com/lib1.js
+// ==/UserScript==`;
+		const file2 = `// ==UserScript==
+// @name Second
+// @match https://second.com/*
+// @require https://cdn.example.com/lib2.js
+// ==/UserScript==`;
+		const result = getMetadata([file1, file2], new Set());
+		expect(result).toContain('@name    First');
+		expect(result).not.toContain('Second');
+		expect(result).toContain('@match   https://first.com/*');
+		expect(result).toContain('@match   https://second.com/*');
+		expect(result).toContain('@require https://cdn.example.com/lib1.js');
+		expect(result).toContain('@require https://cdn.example.com/lib2.js');
+	});
+
+	it('should merge @resource entries across files', () => {
+		const file1 = `// ==UserScript==
+// @name TestScript
+// @resource mylib https://cdn.example.com/lib.js
+// ==/UserScript==`;
+		const file2 = `// ==UserScript==
+// @resource other https://cdn.example.com/other.js
+// ==/UserScript==`;
+		const result = getMetadata([file1, file2], new Set());
+		expect(result).toContain('// @resource mylib https://cdn.example.com/lib.js');
+		expect(result).toContain('// @resource other https://cdn.example.com/other.js');
+	});
 });
