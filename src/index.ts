@@ -10,6 +10,37 @@ type TransformFn = (metadata: string) => string;
 export interface UserscriptMetaOptions {
 	transform?: TransformFn;
 	ignoreAutomaticGrants?: string[];
+	/**
+	 * An experimental option to wrap the userscript's metadata in a template literal.
+	 * This *should* allow the plugin to be used easily
+	 * without immediately being broken by a minifier.
+	 * This has been tested and works on TamperMonkey and ViolentMonkey,
+	 * so it should work for most of your users.
+	 * "\`" characters probably won't work with this, but I'm too lazy to do that.
+	 * Before:
+	 * ```js
+	 * // ==UserScript==
+	 * // @name        Test script
+	 * // ...
+	 * // ==/UserScript==
+	 * console.log("hello")
+	 * ```
+	 * After:
+	 * ```js
+	 * _=`// ==UserScript==
+	 * // @name        Test script
+	 * // ...
+	 * // ==/UserScript==`;
+	 * console.log("hello")
+	 * ```
+	 * It's no magic, it just wraps your metadata in a template literal and assigns it.
+	 * Note that this WILL make top-level `"use strict"` directives effectively invalid,
+	 * since your actual code gets pushed down a few lines.
+	 * it may cause some quirks if you try to access a variable named `_` before its initialized,
+	 * but no one cares, so I don't bother with that.
+	 * @default false
+	 */
+	metadataExperiment?: boolean;
 }
 
 type TransformOrUserOpt = TransformFn | UserscriptMetaOptions;
@@ -59,7 +90,7 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 			},
 
 			banner: {
-				order: 'post',
+				order: 'pre',
 				async handler(chunk) {
 					if (!chunk.isEntry) return;
 
@@ -90,8 +121,15 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 						}
 					}
 
-					let metadata = getMetadata(metadataContents, grantSet);
-					if (userOptions?.transform) metadata = userOptions.transform(metadata);
+					const transform = userOptions?.transform ?? ((s) => s);
+					const metadata = transform(getMetadata(metadataContents, grantSet));
+					// TODO: properly escape the metadata string thing
+					// TODO: `"use strict"` only works if its on top of the script,
+					//		 this breaks it by putting it many lines below.
+					//		 but no one cares lol
+					if (userOptions?.metadataExperiment) {
+						return `_=\`${metadata}\``;
+					}
 					return metadata;
 				},
 			},

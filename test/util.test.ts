@@ -1,6 +1,6 @@
 import { parse } from 'oxc-parser';
-import { describe, expect, it } from 'vitest';
-import { collectGrants, getMetadata } from '../src/util';
+import { describe, expect, it } from 'bun:test';
+import { collectGrants, getMetadata } from '../src/util.js';
 
 describe('collectGrants', () => {
 	const parseCode = async (code: string) => {

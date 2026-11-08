@@ -1,10 +1,10 @@
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { build } from 'rolldown';
-import { describe, expect, it, afterAll } from 'vitest';
-import userscript from '../src/index';
+import { describe, expect, it, afterAll } from 'bun:test';
+import userscript from '../src/index.js';
 
-const tmpDir = join(import.meta.dirname, '.tmp-integration');
+const tmpDir = join(import.meta.dir, '.tmp-integration');
 
 function cleanup() {
 	rmSync(tmpDir, { recursive: true, force: true });

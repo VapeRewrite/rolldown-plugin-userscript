@@ -1,19 +1,6 @@
 {
-	"compilerOptions": {
-		"target": "esnext",
-		"module": "nodenext",
-		"moduleResolution": "nodenext",
-		"types": [
-			"node"
-		],
-		"declaration": true,
-		"emitDeclarationOnly": true,
-		"outDir": "dist",
-		"rootDir": "src",
-		"skipLibCheck": true,
-		"isolatedDeclarations": true
-	},
-	"include": [
-		"src/**/*"
+	"extends": [
+		"./tsconfig.plugin.json",
+		"./tsconfig.test.json"
 	]
 }
