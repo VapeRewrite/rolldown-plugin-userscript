@@ -1,6 +1,6 @@
 {
 	"name": "rolldown-plugin-userscript",
-	"version": "1.1.7",
+	"version": "1.1.8",
 	"description": "Rolldown plugin for UserScripts",
 	"author": "Seized and Desisted",
 	"license": "MIT",
@@ -60,7 +60,7 @@
 		"url": "git+https://github.com/MinibloxCheaters2/rolldown-plugin-userscript.git"
 	},
 	"engines": {
-		"node": ">=18",
+		"node": ">=26",
 		"bun": ">=1"
 	}
 }

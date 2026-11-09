@@ -38,9 +38,12 @@ export interface UserscriptMetaOptions {
 	 * since your actual code gets pushed down a few lines.
 	 * it may cause some quirks if you try to access a variable named `_` before its initialized,
 	 * but no one cares, so I don't bother with that.
+	 * `violentmonkey-error-hack` is
+	 * to fix the "Unexpected text before "//" in "_ = `// ==UserScript==`" error
+	 * only use it in dev builds since only stop tracking seems to break with errors
 	 * @default false
 	 */
-	metadataExperiment?: boolean;
+	metadataExperiment?: "violentmonkey-error-hack" | boolean;
 }
 
 type TransformOrUserOpt = TransformFn | UserscriptMetaOptions;
@@ -127,8 +130,12 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 					// TODO: `"use strict"` only works if its on top of the script,
 					//		 this breaks it by putting it many lines below.
 					//		 but no one cares lol
+					// we're intentionally assigning `window.globalThis` since its read-only.
+					// previously, we were assigning `_` to a value,
+					// which some sites could possibly detect.
 					if (userOptions?.metadataExperiment) {
-						return `_=\`${metadata}\`;`;
+						const h = userOptions.metadataExperiment === "violentmonkey-error-hack" ? "\n" : "";
+						return `globalThis=\`${h}${metadata}\`;`;
 					}
 					return metadata;
 				},
