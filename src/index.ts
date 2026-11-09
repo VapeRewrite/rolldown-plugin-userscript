@@ -128,7 +128,7 @@ function userscriptPlugin(transformOrUserOptions?: TransformOrUserOpt): Plugin {
 					//		 this breaks it by putting it many lines below.
 					//		 but no one cares lol
 					if (userOptions?.metadataExperiment) {
-						return `_=\`${metadata}\``;
+						return `_=\`${metadata}\`;`;
 					}
 					return metadata;
 				},
