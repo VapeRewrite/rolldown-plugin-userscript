@@ -57,7 +57,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/MinibloxCheaters2/rolldown-plugin-userscript.git"
+		"url": "git+https://github.com/VapeRewrite/rolldown-plugin-userscript.git"
 	},
 	"engines": {
 		"node": ">=26",
