@@ -17,7 +17,8 @@ describe('rolldown-plugin-userscript', () => {
 			]
 		});
 		const out = await rd.generate({
-			minify: true
+			minify: true,
+			format: "iife"
 		});
 		const chunk = out.output[0];
 		console.log(chunk.code);
